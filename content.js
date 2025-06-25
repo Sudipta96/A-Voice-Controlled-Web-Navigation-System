@@ -5,13 +5,16 @@ let hideTimer = null;
 let selectedLanguage = "en-US";
 let commandData = null;
 
-// Helper: get last N words
+let lastSpoken = "";
+let lastSpokenTime = 0;
+let silenceTimer = null;
+const SILENCE_TIMEOUT = 10000; // 10 seconds silence timeout
+
 function lastWords(text, n = 10) {
   const words = text.trim().split(/\s+/);
   return words.slice(-n).join(" ");
 }
 
-// Match command pattern from JSON
 function matchCommand(transcript, commandData) {
   transcript = transcript.trim().toLowerCase();
   for (const intent in commandData) {
@@ -29,7 +32,6 @@ function matchCommand(transcript, commandData) {
   return null;
 }
 
-// Spoken URL parser
 function isSpokenUrl(value) {
   return /(?:dot|www|https)/i.test(value);
 }
@@ -45,7 +47,6 @@ function spokenToUrl(text) {
     .trim();
 }
 
-// Voice UI bubble
 function createBubble() {
   if (bubble) return;
   bubble = document.createElement("div");
@@ -79,7 +80,15 @@ function showInBubble(text) {
   }, 2000);
 }
 
-// Start/Stop voice
+function resetSilenceTimer() {
+  if (silenceTimer) clearTimeout(silenceTimer);
+  silenceTimer = setTimeout(() => {
+    console.log("⏰ Silence timeout reached. Stopping recognition.");
+    stopRecognition();
+    showInBubble("🔇 Stopped due to silence");
+  }, SILENCE_TIMEOUT);
+}
+
 chrome.runtime.onMessage.addListener((request) => {
   if (request.action === "start") {
     selectedLanguage = request.lang || "en-US";
@@ -96,6 +105,7 @@ function startRecognition() {
     window.SpeechRecognition || window.webkitSpeechRecognition;
   if (!SpeechRecognition) {
     console.error("SpeechRecognition not supported");
+    showInBubble("⚠️ SpeechRecognition not supported");
     return;
   }
 
@@ -104,7 +114,10 @@ function startRecognition() {
       .then((res) => res.json())
       .then((data) => {
         commandData = data;
-        startRecognition(); // Retry after loading
+        startRecognition(); // Retry after loading commands
+      })
+      .catch(() => {
+        showInBubble("❌ Failed to load commands");
       });
     return;
   }
@@ -118,64 +131,97 @@ function startRecognition() {
     isListening = true;
     showInBubble("🎤 Listening...");
     console.log("Voice recognition started");
+    resetSilenceTimer();
   };
 
-  let lastSpoken = "";
-  let lastSpokenTime = 0;
-
   recognition.onresult = (event) => {
+    resetSilenceTimer();
+
     const lastResult = event.results[event.results.length - 1];
     let transcript = lastResult[0].transcript.trim().toLowerCase();
     const isFinal = lastResult.isFinal;
 
     if (!transcript) return;
 
-    const now = Date.now();
-
-    // Show live transcript
     showInBubble(
       isFinal ? "🗣️ " + lastWords(transcript) : "…" + lastWords(transcript)
     );
 
-    // ✅ Only trigger if "done" is said at the end
+    if (transcript.includes("stop listening")) {
+      stopRecognition();
+      showInBubble("🛑 Voice recognition stopped by command");
+      return;
+    }
+
     if (!transcript.endsWith("done")) return;
 
-    // 🧼 Remove "done" from end
+    // Remove the trailing "done"
     transcript = transcript.replace(/done$/, "").trim();
 
-    // Avoid reprocessing same command
-    if (transcript === lastSpoken && now - lastSpokenTime < 1500) return;
-    lastSpoken = transcript;
+    // Find last index of "search" or "google"
+    let lastSearchIndex = transcript.lastIndexOf("search");
+    let lastGoogleIndex = transcript.lastIndexOf("google");
+
+    // Choose the later one of search/google
+    let commandIndex = Math.max(lastSearchIndex, lastGoogleIndex);
+
+    if (commandIndex === -1) {
+      // No command found, ignore
+      return;
+    }
+
+    // Extract the command phrase after the last "search" or "google"
+    let commandPhrase = transcript.slice(commandIndex).trim();
+
+    // Now remove "search" or "google" keyword from start
+    if (commandPhrase.startsWith("search")) {
+      commandPhrase = commandPhrase.replace(/^search/, "").trim();
+    } else if (commandPhrase.startsWith("google")) {
+      commandPhrase = commandPhrase.replace(/^google/, "").trim();
+    }
+
+    // Prevent duplicate processing
+    const now = Date.now();
+    if (commandPhrase === lastSpoken && now - lastSpokenTime < 1500) return;
+    lastSpoken = commandPhrase;
     lastSpokenTime = now;
 
-    const match = matchCommand(transcript, commandData);
-    if (match && match.intent === "search_google") {
-      const query = match.value;
+    const match = matchCommand("search *", {
+      search_google: ["search *", "google *"],
+    });
+    // matchCommand expects whole commandData, but we can shortcut:
+    // Or simply process commandPhrase here directly:
 
-      if (isSpokenUrl(query)) {
-        const url = "https://" + spokenToUrl(query);
-        window.open(url, "_blank");
-        showInBubble("🌐 Opening " + url);
-      } else {
-        const searchUrl =
-          "https://www.google.com/search?q=" + encodeURIComponent(query);
-        window.open(searchUrl, "_blank");
-        showInBubble("🔍 Searching: " + query);
-      }
-
-      stopRecognition();
+    if (isSpokenUrl(commandPhrase)) {
+      const url = "https://" + spokenToUrl(commandPhrase);
+      window.open(url, "_blank");
+      showInBubble("🌐 Opening " + url);
+    } else {
+      const searchUrl =
+        "https://www.google.com/search?q=" + encodeURIComponent(commandPhrase);
+      window.open(searchUrl, "_blank");
+      showInBubble("🔍 Searching: " + commandPhrase);
     }
   };
 
   recognition.onerror = (e) => {
     console.error("Speech error:", e.error);
-    stopRecognition();
     showInBubble("⚠️ " + e.error);
+    // Only stop if critical error like 'not-allowed'
+    if (e.error === "not-allowed" || e.error === "service-not-allowed") {
+      stopRecognition();
+    }
   };
 
   recognition.onend = () => {
     isListening = false;
     console.warn("🔇 Recognition ended");
+    // Auto restart to enable continuous listening (multi-command)
+    // But only if user didn’t manually stop (recognition != null)
+    if (recognition !== null) {
+      console.log("⏩ Restarting recognition for multi-command mode");
+      recognition.start();
+    }
   };
 
   recognition.start();
@@ -183,9 +229,12 @@ function startRecognition() {
 
 function stopRecognition() {
   if (recognition) {
-    recognition.stop();
+    // Set recognition to null first to prevent auto restart in onend
+    const tempRecognition = recognition;
     recognition = null;
+    tempRecognition.stop();
   }
   isListening = false;
+  if (silenceTimer) clearTimeout(silenceTimer);
   showInBubble("🔇 Stopped");
 }
