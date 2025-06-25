@@ -10,14 +10,17 @@
   "background": {
     "service_worker": "background.js"
   },
-  "host_permissions": [
-    "http://*/*",
-    "https://*/*"
-  ],
+  "host_permissions": ["http://*/*", "https://*/*"],
   "content_scripts": [
     {
       "matches": ["<all_urls>"],
       "js": ["content.js"]
+    }
+  ],
+  "web_accessible_resources": [
+    {
+      "resources": ["recognizer.html", "recognizer.js"],
+      "matches": ["<all_urls>"]
     }
   ]
 }
