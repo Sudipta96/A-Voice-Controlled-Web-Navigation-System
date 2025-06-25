@@ -1,106 +1,53 @@
 let recognition = null;
+let isListening = false;
 let bubble = null;
 let hideTimer = null;
-let isListening = false;
+let selectedLanguage = "en-US";
+let commandData = null;
 
-chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
-  if (request.action === "start") {
-    console.log("🟢 Received START");
-    startRecognition();
-  } else if (request.action === "stop") {
-    console.log("🔴 Received STOP");
-    stopRecognition();
-  }
-});
-
-function startRecognition() {
-  if (isListening) {
-    console.warn("⚠️ Already listening");
-    return;
-  }
-
-  if (!window.SpeechRecognition && !window.webkitSpeechRecognition) {
-    console.error("🚫 SpeechRecognition not supported");
-    return;
-  }
-
-  const SpeechRecognition =
-    window.SpeechRecognition || window.webkitSpeechRecognition;
-  recognition = new SpeechRecognition();
-  recognition.continuous = true;
-  recognition.interimResults = true; // ✅ Show live partial results
-  recognition.lang = "en-US";
-
-  recognition.onstart = () => {
-    isListening = true;
-    console.log("✅ Voice recognition started");
-    showInBubble("🎤 Listening...");
-  };
-
-  // helper: return only the last N words of a string
-  function lastWords(text, n = 10) {
-    const words = text.trim().split(/\s+/);
-    return words.slice(-n).join(" ");
-  }
-
-  recognition.onresult = (event) => {
-    console.log("🔁 onresult fired:", event.results);
-
-    const lastResult = event.results[event.results.length - 1];
-    const transcript = lastResult[0].transcript.trim();
-    const isFinal = lastResult.isFinal;
-
-    if (transcript) {
-      // ▼▼▼ NEW: show only the last 10 words ▼▼▼
-      const displayText = lastWords(transcript, 10);
-
-      // use different prefixes for live vs. final (optional)
-      showInBubble(isFinal ? "🗣️ " + displayText : "…" + displayText);
-    }
-  };
-
-  recognition.onerror = (e) => {
-    console.error("❌ Speech recognition error:", e.error);
-    showInBubble("⚠️ " + e.error);
-    stopRecognition();
-  };
-
-  recognition.onend = () => {
-    console.warn("🔇 Recognition ended");
-    showInBubble("🔇 Stopped");
-    isListening = false;
-    recognition = null;
-  };
-
-  try {
-    recognition.start();
-    console.log("🎤 Called recognition.start()");
-  } catch (err) {
-    console.error("⛔ start() failed:", err.message);
-  }
+// Helper: get last N words
+function lastWords(text, n = 10) {
+  const words = text.trim().split(/\s+/);
+  return words.slice(-n).join(" ");
 }
 
-function stopRecognition() {
-  if (recognition) {
-    try {
-      recognition.onresult = null;
-      recognition.onerror = null;
-      recognition.onend = null;
-      recognition.stop();
-    } catch (e) {
-      console.error("⚠️ Error during stop:", e.message);
+// Match command pattern from JSON
+function matchCommand(transcript, commandData) {
+  transcript = transcript.trim().toLowerCase();
+  for (const intent in commandData) {
+    const patterns = commandData[intent];
+    for (const pattern of patterns) {
+      if (pattern.includes("*")) {
+        const prefix = pattern.split("*")[0].trim();
+        if (transcript.startsWith(prefix)) {
+          const value = transcript.slice(prefix.length).trim();
+          return { intent, value };
+        }
+      }
     }
-    recognition = null;
   }
-
-  isListening = false;
-  showInBubble("🔇 Voice recognition stopped");
-  console.log("🛑 Voice recognition manually stopped");
+  return null;
 }
 
+// Spoken URL parser
+function isSpokenUrl(value) {
+  return /(?:dot|www|https)/i.test(value);
+}
+
+function spokenToUrl(text) {
+  return text
+    .replace(/\s+dot\s+/gi, ".")
+    .replace(/\s+slash\s+/gi, "/")
+    .replace(/\s+colon\s+/gi, ":")
+    .replace(/\s+/g, "")
+    .replace(/^https?:\/\//, "")
+    .replace(/^www\./, "")
+    .trim();
+}
+
+// Voice UI bubble
 function createBubble() {
   if (bubble) return;
-
   bubble = document.createElement("div");
   bubble.style.position = "fixed";
   bubble.style.bottom = "20px";
@@ -120,11 +67,9 @@ function createBubble() {
 
 function showInBubble(text) {
   if (!bubble) createBubble();
-
   bubble.innerText = text;
   bubble.style.display = "block";
   bubble.style.opacity = "0.9";
-
   if (hideTimer) clearTimeout(hideTimer);
   hideTimer = setTimeout(() => {
     bubble.style.opacity = "0";
@@ -132,4 +77,115 @@ function showInBubble(text) {
       bubble.style.display = "none";
     }, 500);
   }, 2000);
+}
+
+// Start/Stop voice
+chrome.runtime.onMessage.addListener((request) => {
+  if (request.action === "start") {
+    selectedLanguage = request.lang || "en-US";
+    startRecognition();
+  } else if (request.action === "stop") {
+    stopRecognition();
+  }
+});
+
+function startRecognition() {
+  if (isListening) return;
+
+  const SpeechRecognition =
+    window.SpeechRecognition || window.webkitSpeechRecognition;
+  if (!SpeechRecognition) {
+    console.error("SpeechRecognition not supported");
+    return;
+  }
+
+  if (!commandData) {
+    fetch(chrome.runtime.getURL("commands/en.json"))
+      .then((res) => res.json())
+      .then((data) => {
+        commandData = data;
+        startRecognition(); // Retry after loading
+      });
+    return;
+  }
+
+  recognition = new SpeechRecognition();
+  recognition.lang = selectedLanguage;
+  recognition.continuous = true;
+  recognition.interimResults = true;
+
+  recognition.onstart = () => {
+    isListening = true;
+    showInBubble("🎤 Listening...");
+    console.log("Voice recognition started");
+  };
+
+  let lastSpoken = "";
+  let lastSpokenTime = 0;
+
+  recognition.onresult = (event) => {
+    const lastResult = event.results[event.results.length - 1];
+    let transcript = lastResult[0].transcript.trim().toLowerCase();
+    const isFinal = lastResult.isFinal;
+
+    if (!transcript) return;
+
+    const now = Date.now();
+
+    // Show live transcript
+    showInBubble(
+      isFinal ? "🗣️ " + lastWords(transcript) : "…" + lastWords(transcript)
+    );
+
+    // ✅ Only trigger if "done" is said at the end
+    if (!transcript.endsWith("done")) return;
+
+    // 🧼 Remove "done" from end
+    transcript = transcript.replace(/done$/, "").trim();
+
+    // Avoid reprocessing same command
+    if (transcript === lastSpoken && now - lastSpokenTime < 1500) return;
+    lastSpoken = transcript;
+    lastSpokenTime = now;
+
+    const match = matchCommand(transcript, commandData);
+    if (match && match.intent === "search_google") {
+      const query = match.value;
+
+      if (isSpokenUrl(query)) {
+        const url = "https://" + spokenToUrl(query);
+        window.open(url, "_blank");
+        showInBubble("🌐 Opening " + url);
+      } else {
+        const searchUrl =
+          "https://www.google.com/search?q=" + encodeURIComponent(query);
+        window.open(searchUrl, "_blank");
+        showInBubble("🔍 Searching: " + query);
+      }
+
+      stopRecognition();
+    }
+  };
+
+  recognition.onerror = (e) => {
+    console.error("Speech error:", e.error);
+    stopRecognition();
+    showInBubble("⚠️ " + e.error);
+  };
+
+  recognition.onend = () => {
+    isListening = false;
+    console.warn("🔇 Recognition ended");
+  };
+
+  recognition.start();
+}
+
+function stopRecognition() {
+  if (recognition) {
+    recognition.stop();
+    recognition = null;
+  }
+  isListening = false;
+  showInBubble("🔇 Stopped");
 }

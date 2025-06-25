@@ -9,6 +9,7 @@
     "service_worker": "background.js"
   },
   "action": {
+    "default_popup": "popup.html",
     "default_icon": {
       "16": "icons/mic-off16.png",
       "32": "icons/mic-off32.png"
@@ -18,6 +19,12 @@
     {
       "matches": ["<all_urls>"],
       "js": ["content.js"]
+    }
+  ],
+  "web_accessible_resources": [
+    {
+      "resources": ["commands/en.json"],
+      "matches": ["<all_urls>"]
     }
   ]
 }

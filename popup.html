@@ -1,10 +1,34 @@
 <!DOCTYPE html>
 <html>
   <head>
-    <title>Voice Display</title>
+    <style>
+      body {
+        font-family: Arial, sans-serif;
+        width: 200px;
+        padding: 10px;
+      }
+      button {
+        margin-top: 10px;
+        width: 100%;
+        padding: 8px;
+      }
+      select {
+        width: 100%;
+        margin-top: 5px;
+        padding: 5px;
+      }
+    </style>
   </head>
   <body>
-    <h3>Voice Display Active</h3>
-    <p>Speak and see your words on the page.</p>
+    <label for="language-select">Language:</label>
+    <select id="language-select">
+      <option value="en-US">English</option>
+      <option value="bn-BD">বাংলা</option>
+      <!-- More options can be added here later -->
+    </select>
+
+    <button id="toggle-btn">🎤 Start</button>
+
+    <script src="popup.js"></script>
   </body>
 </html>
