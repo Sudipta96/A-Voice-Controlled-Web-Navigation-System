@@ -1,26 +1,23 @@
 {
   "manifest_version": 3,
-  "name": "Voice Search Assistant",
-  "version": "1.1",
-  "description": "Search the internet using your voice!",
-  "permissions": ["scripting", "tabs"],
-  "action": {
-    "default_popup": "popup.html"
-  },
+  "name": "Voice Toggle Extension",
+  "version": "1.0",
+  "description": "Start/stop voice recognition from the toolbar icon.",
+  "permissions": ["scripting", "tabs", "activeTab"],
+  "host_permissions": ["<all_urls>"],
   "background": {
     "service_worker": "background.js"
   },
-  "host_permissions": ["http://*/*", "https://*/*"],
+  "action": {
+    "default_icon": {
+      "16": "icons/mic-off16.png",
+      "32": "icons/mic-off32.png"
+    }
+  },
   "content_scripts": [
     {
       "matches": ["<all_urls>"],
       "js": ["content.js"]
-    }
-  ],
-  "web_accessible_resources": [
-    {
-      "resources": ["recognizer.html", "recognizer.js"],
-      "matches": ["<all_urls>"]
     }
   ]
 }
