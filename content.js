@@ -10,11 +10,13 @@ let lastSpokenTime = 0;
 let silenceTimer = null;
 const SILENCE_TIMEOUT = 10000; // 10 seconds silence timeout
 
+// Helper: get last N words from text
 function lastWords(text, n = 10) {
   const words = text.trim().split(/\s+/);
   return words.slice(-n).join(" ");
 }
 
+// Match command pattern from JSON commands file
 function matchCommand(transcript, commandData) {
   transcript = transcript.trim().toLowerCase();
   for (const intent in commandData) {
@@ -26,16 +28,23 @@ function matchCommand(transcript, commandData) {
           const value = transcript.slice(prefix.length).trim();
           return { intent, value };
         }
+      } else {
+        // exact match pattern
+        if (transcript === pattern.toLowerCase()) {
+          return { intent, value: transcript };
+        }
       }
     }
   }
   return null;
 }
 
+// Detect if phrase sounds like a URL
 function isSpokenUrl(value) {
   return /(?:dot|www|https)/i.test(value);
 }
 
+// Convert spoken text to URL format
 function spokenToUrl(text) {
   return text
     .replace(/\s+dot\s+/gi, ".")
@@ -47,6 +56,7 @@ function spokenToUrl(text) {
     .trim();
 }
 
+// Create floating bubble for transcript and messages
 function createBubble() {
   if (bubble) return;
   bubble = document.createElement("div");
@@ -66,6 +76,7 @@ function createBubble() {
   document.body.appendChild(bubble);
 }
 
+// Show text in bubble temporarily
 function showInBubble(text) {
   if (!bubble) createBubble();
   bubble.innerText = text;
@@ -80,6 +91,7 @@ function showInBubble(text) {
   }, 2000);
 }
 
+// Reset the silence timeout timer
 function resetSilenceTimer() {
   if (silenceTimer) clearTimeout(silenceTimer);
   silenceTimer = setTimeout(() => {
@@ -89,6 +101,7 @@ function resetSilenceTimer() {
   }, SILENCE_TIMEOUT);
 }
 
+// Listen for messages from popup or background
 chrome.runtime.onMessage.addListener((request) => {
   if (request.action === "start") {
     selectedLanguage = request.lang || "en-US";
@@ -98,6 +111,7 @@ chrome.runtime.onMessage.addListener((request) => {
   }
 });
 
+// Start voice recognition
 function startRecognition() {
   if (isListening) return;
 
@@ -137,77 +151,92 @@ function startRecognition() {
   recognition.onresult = (event) => {
     resetSilenceTimer();
 
-    const lastResult = event.results[event.results.length - 1];
-    let transcript = lastResult[0].transcript.trim().toLowerCase();
-    const isFinal = lastResult.isFinal;
+    // Process all new results starting from event.resultIndex
+    for (let i = event.resultIndex; i < event.results.length; i++) {
+      const result = event.results[i];
+      let transcript = result[0].transcript.trim().toLowerCase();
+      const isFinal = result.isFinal;
 
-    if (!transcript) return;
+      if (!transcript) continue;
 
-    showInBubble(
-      isFinal ? "🗣️ " + lastWords(transcript) : "…" + lastWords(transcript)
-    );
+      showInBubble(
+        isFinal ? "🗣️ " + lastWords(transcript) : "…" + lastWords(transcript)
+      );
 
-    if (transcript.includes("stop listening")) {
-      stopRecognition();
-      showInBubble("🛑 Voice recognition stopped by command");
-      return;
-    }
+      if (transcript.includes("stop listening")) {
+        stopRecognition();
+        showInBubble("🛑 Voice recognition stopped by command");
+        return;
+      }
 
-    if (!transcript.endsWith("done")) return;
+      if (["scroll up", "scroll down", "scroll last", "scroll top"].includes(transcript)) {
+        handleScrollCommand(transcript);
+        continue;
+      }
+      
+      if (["open new tab", "close tab"].includes(transcript)) {
+        chrome.runtime.sendMessage({ action: transcript });
+        showInBubble(transcript === "open new tab" ? "🆕 Opening new tab" : "❌ Closing tab");
+        return;
+      }
+      
+      if (!transcript.endsWith("done")) continue;
 
-    // Remove the trailing "done"
-    transcript = transcript.replace(/done$/, "").trim();
+      transcript = transcript.replace(/done$/, "").trim();
 
-    // Find last index of "search" or "google"
-    let lastSearchIndex = transcript.lastIndexOf("search");
-    let lastGoogleIndex = transcript.lastIndexOf("google");
+      // Find last index of "search" or "google"
+      let lastSearchIndex = transcript.lastIndexOf("search");
+      let lastGoogleIndex = transcript.lastIndexOf("google");
+      let commandIndex = Math.max(lastSearchIndex, lastGoogleIndex);
 
-    // Choose the later one of search/google
-    let commandIndex = Math.max(lastSearchIndex, lastGoogleIndex);
+      if (commandIndex === -1) {
+        continue; // no known command prefix found
+      }
 
-    if (commandIndex === -1) {
-      // No command found, ignore
-      return;
-    }
+      // Extract command phrase after last "search" or "google"
+      let commandPhrase = transcript.slice(commandIndex).trim();
 
-    // Extract the command phrase after the last "search" or "google"
-    let commandPhrase = transcript.slice(commandIndex).trim();
+      // Remove the command word prefix
+      if (commandPhrase.startsWith("search")) {
+        commandPhrase = commandPhrase.replace(/^search/, "").trim();
+      } else if (commandPhrase.startsWith("google")) {
+        commandPhrase = commandPhrase.replace(/^google/, "").trim();
+      }
 
-    // Now remove "search" or "google" keyword from start
-    if (commandPhrase.startsWith("search")) {
-      commandPhrase = commandPhrase.replace(/^search/, "").trim();
-    } else if (commandPhrase.startsWith("google")) {
-      commandPhrase = commandPhrase.replace(/^google/, "").trim();
-    }
+      // Prevent duplicate processing
+      const now = Date.now();
+      if (commandPhrase === lastSpoken && now - lastSpokenTime < 1500) continue;
 
-    // Prevent duplicate processing
-    const now = Date.now();
-    if (commandPhrase === lastSpoken && now - lastSpokenTime < 1500) return;
-    lastSpoken = commandPhrase;
-    lastSpokenTime = now;
+      lastSpoken = commandPhrase;
+      lastSpokenTime = now;
 
-    const match = matchCommand("search *", {
-      search_google: ["search *", "google *"],
-    });
-    // matchCommand expects whole commandData, but we can shortcut:
-    // Or simply process commandPhrase here directly:
+      // Match commands from commandData
+      const match = matchCommand(transcript, commandData);
 
-    if (isSpokenUrl(commandPhrase)) {
-      const url = "https://" + spokenToUrl(commandPhrase);
-      window.open(url, "_blank");
-      showInBubble("🌐 Opening " + url);
-    } else {
-      const searchUrl =
-        "https://www.google.com/search?q=" + encodeURIComponent(commandPhrase);
-      window.open(searchUrl, "_blank");
-      showInBubble("🔍 Searching: " + commandPhrase);
+      if (match && match.intent === "search_google") {
+        const query = commandPhrase;
+
+        if (isSpokenUrl(query)) {
+          const url = "https://" + spokenToUrl(query);
+          window.open(url, "_blank");
+          showInBubble("🌐 Opening " + url);
+        } else {
+          const searchUrl =
+            "https://www.google.com/search?q=" + encodeURIComponent(query);
+          window.open(searchUrl, "_blank");
+          showInBubble("🔍 Searching: " + query);
+        }
+      } else if (
+        ["scroll up", "scroll down", "scroll last", "scroll top"].includes(transcript)
+      ) {
+        handleScrollCommand(transcript);
+      }
     }
   };
 
   recognition.onerror = (e) => {
     console.error("Speech error:", e.error);
     showInBubble("⚠️ " + e.error);
-    // Only stop if critical error like 'not-allowed'
     if (e.error === "not-allowed" || e.error === "service-not-allowed") {
       stopRecognition();
     }
@@ -216,8 +245,7 @@ function startRecognition() {
   recognition.onend = () => {
     isListening = false;
     console.warn("🔇 Recognition ended");
-    // Auto restart to enable continuous listening (multi-command)
-    // But only if user didn’t manually stop (recognition != null)
+    // Auto-restart recognition unless manually stopped
     if (recognition !== null) {
       console.log("⏩ Restarting recognition for multi-command mode");
       recognition.start();
@@ -227,9 +255,28 @@ function startRecognition() {
   recognition.start();
 }
 
+// Scroll command handler
+function handleScrollCommand(command) {
+  console.log("scrolling");
+  if (command === "scroll down") {
+    console.log("scrolling down");
+    window.scrollBy({ top: window.innerHeight * 0.7, behavior: "smooth" });
+    showInBubble("⬇️ Scrolling down");
+  } else if (command === "scroll up") {
+    window.scrollBy({ top: -window.innerHeight * 0.7, behavior: "smooth" });
+    showInBubble("⬆️ Scrolling up");
+  } else if (command === "scroll last") {
+    window.scrollTo({ top: document.body.scrollHeight, behavior: "smooth" });
+    showInBubble("⏬ Scrolling to bottom");
+  }else if (command === "scroll top") {
+    window.scrollTo({ top: 0, behavior: "smooth" });
+    showInBubble("⏫ Scrolling to top");
+  }
+}
+
+// Stop voice recognition
 function stopRecognition() {
   if (recognition) {
-    // Set recognition to null first to prevent auto restart in onend
     const tempRecognition = recognition;
     recognition = null;
     tempRecognition.stop();

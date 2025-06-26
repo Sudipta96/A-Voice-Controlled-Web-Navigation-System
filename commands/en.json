@@ -1,6 +1,5 @@
 {
-  "search_google": [
-    "search *",
-    "google *"
-  ]
+  "search_google": ["search *", "google *"],
+  "scroll": ["scroll up", "scroll down", "scroll last"],
+  "tabs": ["open new tab", "close tab"]
 }

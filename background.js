@@ -14,3 +14,12 @@ chrome.action.onClicked.addListener(async (tab) => {
     action: isListening ? "start" : "stop",
   });
 });
+
+chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
+  if (message.action === "open new tab") {
+    chrome.tabs.create({ url: "https://www.google.com/" });
+  } else if (message.action === "close tab" && sender.tab?.id) {
+    chrome.tabs.remove(sender.tab.id);
+  }
+});
+
