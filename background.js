@@ -16,10 +16,14 @@ chrome.action.onClicked.addListener(async (tab) => {
 });
 
 chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
-  if (message.action === "open new tab") {
+  if (message.action === "new tab") {
     chrome.tabs.create({ url: "https://www.google.com/" });
-  } else if (message.action === "close tab" && sender.tab?.id) {
-    chrome.tabs.remove(sender.tab.id);
+  } else if (message.action === "close tab") {
+    // Always close the currently active tab in the current window
+    chrome.tabs.query({ active: true, currentWindow: true }, (tabs) => {
+      if (tabs.length > 0) {
+        chrome.tabs.remove(tabs[0].id);
+      }
+    });
   }
 });
-
