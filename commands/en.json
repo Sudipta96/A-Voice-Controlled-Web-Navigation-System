@@ -1,5 +1,52 @@
 {
+  "stop_listening": ["stop listening", "stop", "pause voice", "voice off"],
+  "enable": ["enable", "start listening", "voice on"],
+
+  "scroll_up": ["scroll up", "go up", "move up"],
+  "scroll_down": ["scroll down", "go down", "move down"],
+  "scroll_last": ["scroll last", "scroll bottom", "go to bottom"],
+  "scroll_top": ["scroll top", "go to top", "top of page"],
+
+  "new_tab": ["new tab", "open new tab", "create tab"],
+  "close_tab": ["close tab", "remove tab"],
+
+  "next_tab": ["next tab", "next", "switch next tab", "go next"],
+  "prev_tab": ["previous tab", "go back tab", "prev tab", "last tab"],
+  "go_back_tab": ["go back", "back to last tab"],
+
+  "switch_tab": [
+    "tab one",
+    "tab 1",
+    "tab two",
+    "tab 2",
+    "tab three",
+    "tab 3",
+    "tab four",
+    "tab 4",
+    "tab five",
+    "tab 5",
+    "tab six",
+    "tab 6",
+    "tab seven",
+    "tab 7",
+    "tab eight",
+    "tab 8",
+    "tab nine",
+    "tab 9",
+    "tab ten",
+    "tab 10"
+  ],
+
+  "open_site": ["open youtube", "open gmail", "open facebook"],
+
   "search_google": ["search *", "google *"],
-  "scroll": ["scroll up", "scroll down", "scroll last"],
-  "tabs": ["open new tab", "close tab"]
+  "media_play": ["play", "resume"],
+  "media_pause": ["pause", "stop video"],
+  "media_volume_up": ["volume up"],
+  "media_volume_down": ["volume down"],
+  "media_volume_set": ["volume * percent"],
+  "media_mute": ["mute"],
+  "media_unmute": ["unmute"],
+  "media_forward": ["forward * seconds", "go forward * seconds"],
+  "media_backward": ["back * seconds", "go back * seconds"]
 }

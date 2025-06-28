@@ -23,7 +23,7 @@
   ],
   "web_accessible_resources": [
     {
-      "resources": ["commands/en.json"],
+      "resources": ["commands/en.json", "commands/bn.json"],
       "matches": ["<all_urls>"]
     }
   ]
