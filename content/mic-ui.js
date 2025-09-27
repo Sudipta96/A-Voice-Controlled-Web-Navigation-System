@@ -90,6 +90,16 @@ function injectLanguageSelector() {
   document.body.appendChild(select);
 }
 
+function setLanguage(langCode) {
+  window.selectedLanguageCode = langCode;
+  if (langCode.startsWith("bn")) {
+    window.selectedLang = "bn";
+  } else {
+    window.selectedLang = "en";
+  }
+  console.log("🔁 Language set to:", window.selectedLanguageCode);
+}
+
 // function injectLanguageSelector() {
 //   if (document.getElementById("lang-select")) return;
 

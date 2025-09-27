@@ -9,9 +9,33 @@ chrome.tabs.onActivated.addListener((activeInfo) => {
   currentActiveTabId = activeInfo.tabId;
 });
 
+// background.js
+// chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
+//   if (message.action === "logTestResult") {
+//     chrome.storage.local.get({ testResults: [] }, (data) => {
+//       const results = data.testResults;
+//       results.push(message.result);
+//       chrome.storage.local.set({ testResults: results }, () => {
+//         console.log("✅ Test logged:", message.result);
+//       });
+//     });
+//   }
+// });
+
+
 chrome.runtime.onMessage.addListener((msg, sender, sendResponse) => {
   console.log("background js");
   console.log(sender.tab.id);
+
+  if (msg.action === "logTestResult") {
+    chrome.storage.local.get({ testResults: [] }, (data) => {
+      const results = data.testResults;
+      results.push(message.result);
+      chrome.storage.local.set({ testResults: results }, () => {
+        console.log("✅ Test logged:", message.result);
+      });
+    });
+  }
 
   if (msg.action === "openNewTab" && msg.url) {
     chrome.tabs.create({ url: msg.url });

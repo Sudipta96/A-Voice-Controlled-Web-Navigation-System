@@ -59,6 +59,6 @@ function matchCommand(transcript) {
       }
     }
   }
-
+  
   return null;
 }

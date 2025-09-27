@@ -7,6 +7,7 @@ function initialize() {
   loadCommandFile("en", () => {});
   injectMicButton();
   startRecognition();
+  showTestResults();
 }
 
 initialize();

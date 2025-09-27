@@ -1,9 +1,9 @@
 {
   "manifest_version": 3,
-  "name": "Voice Toggle Extension",
+  "name": "Voice Controlled Web Navigation",
   "version": "1.0",
   "description": "Start/stop voice recognition from the toolbar icon.",
-  "permissions": ["scripting", "tabs", "activeTab", "contextMenus"],
+  "permissions": ["storage", "scripting", "tabs", "activeTab", "contextMenus"],
   "host_permissions": ["<all_urls>"],
   "background": {
     "service_worker": "background.js"
@@ -19,6 +19,7 @@
     {
       "matches": ["<all_urls>"],
       "js": [
+        "content/test_results.js",
         "content/utils.js",
         "content/mic-ui.js",
         "content/media.js",

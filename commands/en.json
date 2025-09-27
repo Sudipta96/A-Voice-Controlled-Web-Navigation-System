@@ -37,7 +37,7 @@
 
   "zoom_in": ["zoom in", "increase zoom", "make bigger"],
   "zoom_out": ["zoom out", "decrease zoom", "make smaller"],
-  "reset_zoom": ["reset zoom", "normal zoom"],
+  "zoom_reset": ["reset zoom", "normal zoom"],
 
   "form_start": [
     "start form",
@@ -71,7 +71,7 @@
   "read_section": ["read *"],
   "stop_reading": ["stop reading", "cancel reading"],
   "close_window": ["close window", "window stop", "cancel window"],
-  "toggle_lang": ["toggle", "change language"],
+  "toggle_lang": ["language", "toggle", "change language"],
   "read_faster": ["read faster", "increase reading speed", "faster"],
   "read_slower": ["read slower", "decrease reading speed", "slower"],
   "read_speed_reset": ["reset reading speed", "default speed"],

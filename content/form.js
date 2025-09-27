@@ -22,6 +22,8 @@ let passwordSuggestionPending = false;
 function handleFormCommand(intent, value, transcript) {
   if (!formMode && intent !== "form_start") return;
 
+  const startTimeFormStart = performance.now();
+
   switch (intent) {
     case "form_start":
       formFields = Array.from(
@@ -35,6 +37,7 @@ function handleFormCommand(intent, value, transcript) {
       formMode = true;
       currentFieldIndex = 0;
       formFields[currentFieldIndex].focus();
+      logTestResult(intent, "Pass", startTimeFormStart);
       showBubble("📝 Form mode enabled");
       addFieldBadges();
       showBubble("🔢 Index mode started");
@@ -44,6 +47,7 @@ function handleFormCommand(intent, value, transcript) {
     case "form_stop_index":
       formMode = false;
       clearFieldBadges();
+      logTestResult(intent, "Pass", startTimeFormStart);
       showBubble("✅ Form mode stopped");
       break;
 
@@ -51,6 +55,7 @@ function handleFormCommand(intent, value, transcript) {
       finalFormIndex = currentFieldIndex;
       currentFieldIndex = -1;
       document.activeElement?.blur();
+      logTestResult(intent, "Pass", startTimeFormStart);
       showBubble("👀 Focus removed");
       break;
 
@@ -58,6 +63,7 @@ function handleFormCommand(intent, value, transcript) {
       if (formFields[currentFieldIndex + 1]) {
         currentFieldIndex++;
         formFields[currentFieldIndex].focus();
+        logTestResult(intent, "Pass", startTimeFormStart);
         showBubble("➡️ Moved to next field");
       } else {
         showBubble("⚠️ No next field");
@@ -68,6 +74,7 @@ function handleFormCommand(intent, value, transcript) {
       if (currentFieldIndex > 0) {
         currentFieldIndex--;
         formFields[currentFieldIndex].focus();
+        logTestResult(intent, "Pass", startTimeFormStart);
         showBubble("⬅️ Moved to previous field");
       } else {
         showBubble("⚠️ Already at first field");
@@ -82,14 +89,17 @@ function handleFormCommand(intent, value, transcript) {
         field.dispatchEvent(new Event("input", { bubbles: true }));
         showBubble("🧹 Cleared field");
       }
+      logTestResult(intent, "Pass", startTimeFormStart);
       break;
 
     case "form_go_to_field":
       focusFieldByLabel(value);
+      logTestResult(intent, "Pass", startTimeFormStart);
       break;
 
     case "form_start_index":
       addFieldBadges();
+      logTestResult(intent, "Pass", startTimeFormStart);
       showBubble("🔢 Index mode started");
       break;
 
@@ -102,6 +112,7 @@ function handleFormCommand(intent, value, transcript) {
       if (active && active.tagName === "SELECT") {
         // redirect to dropdown handler
         handleDropdownInput(transcript, active);
+        logTestResult(intent, "Pass", startTimeFormStart);
       } else {
         // normal radio handling
 
@@ -109,12 +120,15 @@ function handleFormCommand(intent, value, transcript) {
         if (optMatch) {
           const index = parseInt(optMatch[1], 10);
           selectRadioByIndex(index);
+          logTestResult(intent, "Pass", startTimeFormStart);
         } else if (value && !isNaN(value)) {
           // If parser already gave us a numeric value
           selectRadioByIndex(parseInt(value, 10));
+          logTestResult(intent, "Pass", startTimeFormStart);
         } else {
           // fallback: label-based matching
           selectRadioByLabelOrIndex(value);
+          logTestResult(intent, "Pass", startTimeFormStart);
         }
       }
       break;
@@ -124,9 +138,11 @@ function handleFormCommand(intent, value, transcript) {
       if (active && active.tagName === "SELECT") {
         // redirect to dropdown handler
         handleDropdownInput(transcript, active);
+        logTestResult(intent, "Pass", startTimeFormStart);
       } else {
         // normal radio handling
         selectRadioByLabelOrIndex(value);
+        logTestResult(intent, "Pass", startTimeFormStart);
       }
       break;
 
@@ -137,6 +153,7 @@ function handleFormCommand(intent, value, transcript) {
 
     case "form_submit":
       handleFormSubmit();
+      logTestResult("form_input", "Pass", startTimeFormStart);
       break;
 
     default:
@@ -144,6 +161,7 @@ function handleFormCommand(intent, value, transcript) {
       if (formMode && !intent.startsWith("form_")) {
         console.log("handle input");
         handleFormInput(transcript);
+        logTestResult("form_input", "Pass", startTimeFormStart);
       }
       break;
   }
@@ -660,267 +678,3 @@ function getVisibleOptions(field) {
     dropdownScrollIndex + dropdownScrollLimit
   );
 }
-
-// // form.js
-// console.log("form.js");
-// let formMode = false;
-// let formFields = [];
-// let currentFieldIndex = 0;
-// let finalFormIndex = -1;
-// let passwordSuggestionPending = false;
-// let suggestedPassword = "";
-// let dropdownPopup = null;
-// let dropdownScrollIndex = 0;
-// let dropdownScrollLimit = 10;
-// let dropdownAutoCloseTimer = null;
-
-// function handleFormCommand(intent, value, transcript) {
-//   console.log("inside");
-//   console.log(intent);
-//   // if (!formMode && !["start_form"].includes(intent)) return;
-//   // handle input filling up in form field
-//   if (!intent.startsWith("form_")) {
-//     console.log("handle input");
-//     handleFormInput(transcript);
-//   }
-
-//   switch (intent) {
-//     case "form_start":
-//       console.log("matched");
-//       formFields = Array.from(
-//         document.querySelectorAll("input, textarea, select")
-//       ).filter((el) => el.offsetParent !== null && !el.disabled);
-
-//       if (formFields.length === 0) return showBubble("⚠️ No form fields found");
-
-//       formMode = true;
-//       currentFieldIndex = 0;
-//       formFields[currentFieldIndex].focus();
-//       showBubble("📝 Form mode enabled");
-//       break;
-
-//     case "form_stop":
-//       formMode = false;
-//       showBubble("✅ Form mode stopped");
-//       break;
-
-//     case "form_remove_focus":
-//       finalFormIndex = currentFieldIndex;
-//       currentFieldIndex = -1;
-//       document.activeElement?.blur();
-//       break;
-
-//     case "form_submit":
-//       handleFormSubmit(transcript);
-//       break;
-
-//     case "form_next":
-//       if (formFields[currentFieldIndex + 1]) {
-//         currentFieldIndex++;
-//         formFields[currentFieldIndex].focus();
-//         showBubble("➡️ Moved to next field");
-//       }
-//       break;
-
-//     case "form_back":
-//       if (currentFieldIndex > 0) {
-//         currentFieldIndex--;
-//         formFields[currentFieldIndex].focus();
-//         showBubble("⬅️ Moved to previous field");
-//       }
-//       break;
-
-//     case "form_clear_field":
-//       const field = formFields[currentFieldIndex];
-//       if (field) {
-//         field.value = "";
-//         field.focus();
-//         showBubble("🧹 Cleared field");
-//         field.dispatchEvent(new KeyboardEvent("keydown", { key: "ArrowDown" }));
-//       }
-//       break;
-
-//     case "form_go_to_field":
-//       focusFieldByLabel(value);
-//       break;
-
-//     case "form_focus_index":
-//       focusFormFieldByNumber(value);
-//       break;
-
-//     case "form_select_radio":
-//       selectRadioByLabel(value);
-//       break;
-
-//     default:
-//       break;
-//   }
-// }
-
-// function handleFormInput(transcript) {
-//   if (!formMode || !formFields[currentFieldIndex]) return;
-
-//   const field = formFields[currentFieldIndex];
-
-//   if (handlePasswordInput(transcript, field)) return;
-//   if (handleDropdownInput(transcript, field)) return;
-//   if (handleGeneralInput(transcript, field)) return;
-// }
-
-// function handleFormSubmit(transcript) {
-//   if (transcript !== "submit") return;
-
-//   formMode = false;
-//   const field = formFields[finalFormIndex];
-//   const form = field?.form;
-
-//   if (form) {
-//     const btn = form.querySelector(
-//       "button[type='submit'], input[type='submit']"
-//     );
-//     if (btn) {
-//       btn.click();
-//       showBubble("✅ Form submitted");
-//     } else {
-//       form.submit();
-//       showBubble("✅ Form submitted via fallback");
-//     }
-//   } else {
-//     showBubble("⚠️ No form detected");
-//   }
-// }
-
-// function handlePasswordInput(transcript, field) {
-//   if (field.type !== "password") return false;
-
-//   if (transcript === "yes" && passwordSuggestionPending) {
-//     field.value = suggestedPassword;
-//     passwordSuggestionPending = false;
-//     showPasswordPreview(field, suggestedPassword);
-//     showBubble("✅ Password set.");
-//     return true;
-//   }
-
-//   if (transcript === "no" && passwordSuggestionPending) {
-//     passwordSuggestionPending = false;
-//     showBubble("❌ You can type your password by voice.");
-//     return true;
-//   }
-
-//   if (!passwordSuggestionPending) {
-//     suggestedPassword = generateStrongPassword();
-//     passwordSuggestionPending = true;
-//     showBubble(
-//       `🔐 Suggestion: ${suggestedPassword}. Say 'yes' to accept or 'no' to skip.`
-//     );
-//     return true;
-//   }
-
-//   return true;
-// }
-
-// function handleDropdownInput(transcript, field) {
-//   if (field.tagName !== "SELECT") return false;
-
-//   if (transcript === "down") {
-//     dropdownScrollIndex = Math.min(
-//       dropdownScrollIndex + dropdownScrollLimit,
-//       field.options.length - dropdownScrollLimit
-//     );
-//     showDropdownPopup(field);
-//     return true;
-//   }
-
-//   if (transcript === "up") {
-//     dropdownScrollIndex = Math.max(
-//       dropdownScrollIndex - dropdownScrollLimit,
-//       0
-//     );
-//     showDropdownPopup(field);
-//     return true;
-//   }
-
-//   const match = transcript.match(/^option\s+(\d+)/i);
-//   if (match) {
-//     const num = parseInt(match[1]);
-//     const opt = field.options[num - 1];
-//     if (opt) {
-//       field.value = opt.value;
-//       hideDropdownPopup();
-//       showBubble(`✅ Selected: ${opt.text}`);
-//     } else {
-//       showBubble("❌ Invalid option number");
-//     }
-//     return true;
-//   }
-
-//   showDropdownPopup(field);
-//   return true;
-// }
-
-// function handleGeneralInput(transcript, field) {
-//   if (field.tagName === "SELECT" || field.type === "password") return false;
-//   field.value = transcript;
-//   showBubble("✏️ Typed: " + transcript);
-//   return true;
-// }
-
-// function selectRadioByLabel(labelText) {
-//   labelText = labelText.toLowerCase();
-//   const labels = document.querySelectorAll("label");
-//   for (const label of labels) {
-//     if (label.innerText.toLowerCase().includes(labelText)) {
-//       const input = label.control;
-//       if (input && input.type === "radio") {
-//         input.checked = true;
-//         showBubble(`🔘 Selected "${label.innerText}"`);
-//         return;
-//       }
-//     }
-//   }
-//   showBubble("❌ No matching radio found");
-// }
-
-// function focusFormFieldByNumber(input) {
-//   const number = parseInt(input);
-//   const field = isNaN(number) ? null : formFields[number - 1];
-//   if (field) {
-//     currentFieldIndex = number - 1;
-//     field.focus();
-//     showBubble(`🎯 Focused field ${number}`);
-//     return;
-//   }
-//   showBubble("❓ Invalid field number");
-// }
-
-// function focusFieldByLabel(labelText) {
-//   labelText = labelText.trim().toLowerCase();
-
-//   const labels = document.querySelectorAll("label[for]");
-//   for (const label of labels) {
-//     if (label.innerText.trim().toLowerCase().includes(labelText)) {
-//       const id = label.getAttribute("for");
-//       const field = document.getElementById(id);
-//       if (field) {
-//         field.focus();
-//         showBubble(`🔍 Focused on "${labelText}"`);
-//         return true;
-//       }
-//     }
-//   }
-
-//   const inputs = document.querySelectorAll("input, textarea, select");
-//   for (const input of inputs) {
-//     if (
-//       input.placeholder &&
-//       input.placeholder.trim().toLowerCase().includes(labelText)
-//     ) {
-//       input.focus();
-//       showBubble(`🪄 Focused field with placeholder "${input.placeholder}"`);
-//       return true;
-//     }
-//   }
-
-//   showBubble(`❓ Field for "${labelText}" not found`);
-//   return false;
-// }

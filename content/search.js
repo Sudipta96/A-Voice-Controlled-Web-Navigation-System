@@ -1,5 +1,3 @@
-// search.js
-console.log("search.js");
 function isGoogleSearchPage() {
   return (
     location.hostname.includes("google") &&
@@ -15,6 +13,7 @@ function isYouTubeSearchPage() {
 }
 
 function performInlineSearch(query) {
+  const startTime = performance.now(); // ✅ start timestamp
   let input;
 
   if (isGoogleSearchPage()) {
@@ -45,11 +44,14 @@ function performInlineSearch(query) {
         input.form.submit();
       }
 
+      logTestResult("inline_Search", "Pass(query)", startTime);
       showBubble("🔍 Inline search submitted");
     }, 300);
   } else {
-    const searchUrl = "https://www.google.com/search?q=" + encodeURIComponent(query);
+    const searchUrl =
+      "https://www.google.com/search?q=" + encodeURIComponent(query);
     window.open(searchUrl, "_blank");
+    logTestResult("Inline Search", "Pass(new tab)", startTime);
     showBubble("🌐 Fallback search");
   }
 }

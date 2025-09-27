@@ -34,15 +34,7 @@ const LANGUAGES = {
 window.selectedLang = "en";
 window.selectedLanguageCode = "en-US";
 
-function setLanguage(langCode) {
-  window.selectedLanguageCode = langCode;
-  if (langCode.startsWith("bn")) {
-    window.selectedLang = "bn";
-  } else {
-    window.selectedLang = "en";
-  }
-  console.log("🔁 Language set to:", window.selectedLanguageCode);
-}
+
 
 function showBubble(text) {
   let bubble = document.getElementById("speech-bubble");

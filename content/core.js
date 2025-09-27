@@ -9,13 +9,16 @@ let silenceTimer;
 
 let currentZoom = 1.0;
 const ZOOM_STEP = 0.1;
+let mediaMode = false;
+let startTime;
+let intent;
 
-const knownSites = {
-  youtube: "https://www.youtube.com",
-  gmail: "https://mail.google.com",
-  facebook: "https://www.facebook.com",
-  // add more if needed
-};
+// const knownSites = {
+//   youtube: "https://www.youtube.com",
+//   gmail: "https://mail.google.com",
+//   facebook: "https://www.facebook.com",
+//   // add more if needed
+// };
 
 function startRecognition() {
   const SpeechRecognition =
@@ -110,16 +113,25 @@ function handleRecognitionResult(event) {
     //   handleFormInput(transcript);
     // }
 
+    startTime = performance.now(); // ✅ start timestamp
     const match = matchCommand(transcript);
-    console.log(match);
+    // Recognition accuracy test
+
+    // console.log(match);
+
     if (!match && formMode) {
-      handleFormInput(transcript);
+      handleFormCommand("", "", transcript);
       return;
     }
     if (!match) continue;
 
     const { intent, value } = match;
-    
+
+    // Uncomment this to test recognition accuracy
+    // intent
+    //   ? logAccuracyTestResult("Acurracy", "Pass", startTime)
+    //   : logAccuracyTestResult("Acurracy", "Fail", startTime);
+
     if (intent === "stop_listening") {
       stopRecognition();
       showBubble("🛑 Stopped listening");
@@ -127,69 +139,106 @@ function handleRecognitionResult(event) {
     }
 
     // SCROLL
-    if (intent === "scroll_up") return window.scrollBy(0, -400);
-    if (intent === "scroll_down") return window.scrollBy(0, 400);
-    if (intent === "scroll_top")
-      return window.scrollTo({ top: 0, behavior: "smooth" });
-    if (intent === "scroll_last")
-      return window.scrollTo({
-        top: document.body.scrollHeight,
-        behavior: "smooth",
-      });
+    if (intent.startsWith("scroll_")) {
+      const startTime = performance.now();
+      if (intent === "scroll_up") {
+        window.scrollBy(0, -400);
+        logTestResult(intent, "Pass", startTime);
+        return;
+      }
+      if (intent === "scroll_down") {
+        window.scrollBy(0, 400);
+        logTestResult(intent, "Pass", startTime);
+        return;
+      }
+      if (intent === "scroll_top") {
+        window.scrollTo({ top: 0, behavior: "smooth" });
+        logTestResult(intent, "Pass", startTime);
+        return;
+      }
+      if (intent === "scroll_last") {
+        window.scrollTo({
+          top: document.body.scrollHeight,
+          behavior: "smooth",
+        });
+        logTestResult(intent, "Pass", startTime);
+        return;
+      }
+    }
 
     // ZOOM
-    if (intent === "zoom_in") {
-      currentZoom = Math.min(currentZoom + ZOOM_STEP, 2);
-      document.body.style.zoom = currentZoom;
-      return showBubble(`🔍 Zoomed in to ${Math.round(currentZoom * 100)}%`);
-    }
-    if (intent === "zoom_out") {
-      currentZoom = Math.max(currentZoom - ZOOM_STEP, 0.5);
-      document.body.style.zoom = currentZoom;
-      return showBubble(`🔎 Zoomed out to ${Math.round(currentZoom * 100)}%`);
-    }
-    if (intent === "reset_zoom") {
-      currentZoom = 1;
-      document.body.style.zoom = currentZoom;
-      return showBubble("🔁 Zoom reset to 100%");
+    if (intent.startsWith("zoom_")) {
+      const startTime = performance.now();
+
+      if (intent === "zoom_in") {
+        currentZoom = Math.min(currentZoom + ZOOM_STEP, 2);
+        document.body.style.zoom = currentZoom;
+        logTestResult(intent, "Pass", startTime);
+        return showBubble(`🔍 Zoomed in to ${Math.round(currentZoom * 100)}%`);
+      }
+      if (intent === "zoom_out") {
+        currentZoom = Math.max(currentZoom - ZOOM_STEP, 0.5);
+        document.body.style.zoom = currentZoom;
+        logTestResult(intent, "Pass", startTime);
+        return showBubble(`🔎 Zoomed out to ${Math.round(currentZoom * 100)}%`);
+      }
+      if (intent === "zoom_reset") {
+        currentZoom = 1;
+        document.body.style.zoom = currentZoom;
+        logTestResult(intent, "Pass", startTime);
+        return showBubble("🔁 Zoom reset to 100%");
+      }
     }
 
     // ---------- TABS ----------
     // OPEN NEW TAB
     if (intent === "open_site" && now - lastCommandTime > 2000) {
-      const siteKey = Object.keys(knownSites).find((site) =>
-        transcript.includes(site)
-      );
-      const url = siteKey ? knownSites[siteKey] : "https://www.google.com";
-      chrome.runtime.sendMessage({ action: "openNewTab", url });
+      handleTabCommand(transcript, intent);
       lastCommandTime = now;
-      showBubble("🆕 Opening new tab: " + url);
       return;
     }
 
     if (intent === "tab_display") {
-      return handleTabCommand(intent);
+      return handleTabCommand(transcript, intent);
     }
     if (intent === "tab_next") {
-      return chrome.runtime.sendMessage({ action: "next_tab" });
+      return handleTabCommand(transcript, "tab_next");
     }
-    if (intent === "tab_previous")
-      return chrome.runtime.sendMessage({ action: "prev_tab" });
-
-    if (intent === "tab_switch") {
-      if (value.length > 0) {
-        return chrome.runtime.sendMessage({
-          action: "switch_tab",
-          query: value,
-        });
-      }
+    if (intent === "tab_previous") {
+      return handleTabCommand(transcript, "tab_previous");
     }
-
+    if (intent === "tab_switch" && value.length > 0) {
+      return handleTabCommand(transcript, "tab_switch", value);
+    }
     if (intent === "tab_close" && now - lastCommandTime > 2000) {
-      chrome.runtime.sendMessage({ action: "close_tab" });
+      handleTabCommand(transcript, "tab_close");
       lastCommandTime = now;
       return;
     }
+
+    // if (intent === "tab_display") {
+    //   return handleTabCommand(intent);
+    // }
+    // if (intent === "tab_next") {
+    //   return chrome.runtime.sendMessage({ action: "next_tab" });
+    // }
+    // if (intent === "tab_previous")
+    //   return chrome.runtime.sendMessage({ action: "prev_tab" });
+
+    // if (intent === "tab_switch") {
+    //   if (value.length > 0) {
+    //     return chrome.runtime.sendMessage({
+    //       action: "switch_tab",
+    //       query: value,
+    //     });
+    //   }
+    // }
+
+    // if (intent === "tab_close" && now - lastCommandTime > 2000) {
+    //   chrome.runtime.sendMessage({ action: "close_tab" });
+    //   lastCommandTime = now;
+    //   return;
+    // }
 
     // ---------- Media ----------
     if (intent === "start_media") {
@@ -230,8 +279,6 @@ function handleRecognitionResult(event) {
     }
     console.log(formMode);
 
-   
-
     // INLINE SEARCH
     if (intent === "search") {
       const phrase = transcript.replace(/^(search|google)/, "").trim();
@@ -241,9 +288,14 @@ function handleRecognitionResult(event) {
         } else {
           const url =
             "https://www.google.com/search?q=" + encodeURIComponent(phrase);
-          window.open(url, "_blank");
+          if (now - lastCommandTime > 2000) {
+            window.open(url, "_blank");
+            lastCommandTime = now;
+            logTestResult("Inline Search", "Pass(new tab)", startTime);
+          }
         }
       }
+      return;
     }
 
     // ===============================================================
@@ -316,15 +368,23 @@ function handleReadingCommand(intent, value, transcript) {
 }
 
 function toggleLangForReader() {
+  startTime = performance.now(); // ✅ start timestamp
+  old_lang = selectedLang;
   if (selectedLang === "en") {
     selectedLang = "bn";
     selectedLanguageCode = "bn-BD";
+    setLanguage(selectedLang);
     showBubble("🌐 ভাষা পরিবর্তন: বাংলা");
   } else {
     selectedLang = "en";
     selectedLanguageCode = "en-US";
+    setLanguage(selectedLang);
     showBubble("🌐 Language switched to English");
   }
+
+  old_lang !== selectedLang
+    ? logAccuracyTestResult("Language Toggle", "Pass", startTime)
+    : logAccuracyTestResult("Language Toggle", "Fail", startTime);
 
   if (isListening) {
     stopRecognition();
