@@ -1,0 +1,45 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="UTF-8">
+  <title>Bengali + English TTS</title>
+</head>
+<body>
+  <h2>Custom Bengali & English TTS Reader</h2>
+
+  <textarea id="text" rows="6" cols="60" placeholder="Enter text in English or Bengali..."></textarea><br><br>
+  
+  <select id="lang">
+    <option value="bn">Bengali</option>
+    <option value="en">English</option>
+  </select>
+
+  <button onclick="speakText()">🔊 Read Aloud</button>
+
+  <script>
+    function speakText() {
+      const text = document.getElementById('text').value.trim();
+      const lang = document.getElementById('lang').value;
+
+      if (!text) return alert("Please enter some text");
+
+      // Google Translate TTS URL
+      const url = `https://translate.google.com/translate_tts?ie=UTF-8&q=${encodeURIComponent(text)}&tl=${lang}&client=tw-ob`;
+
+      // Create or reuse audio element
+      let audio = document.getElementById('tts-audio');
+      if (!audio) {
+        audio = document.createElement('audio');
+        audio.id = 'tts-audio';
+        document.body.appendChild(audio);
+      }
+
+      audio.src = url;
+      audio.play().catch(err => {
+        console.error("Playback failed:", err);
+        alert("Audio playback failed. Check your internet or browser settings.");
+      });
+    }
+  </script>
+</body>
+</html>

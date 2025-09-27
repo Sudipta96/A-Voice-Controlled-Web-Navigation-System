@@ -1,36 +1,54 @@
 let lastTabId = null;
+let lastActiveTabId = null;
+let currentActiveTabId = null;
+
+chrome.tabs.onActivated.addListener((activeInfo) => {
+  if (currentActiveTabId !== null && activeInfo.tabId !== currentActiveTabId) {
+    lastActiveTabId = currentActiveTabId;
+  }
+  currentActiveTabId = activeInfo.tabId;
+});
 
 chrome.runtime.onMessage.addListener((msg, sender, sendResponse) => {
   console.log("background js");
   console.log(sender.tab.id);
-  if (msg.action === "new tab") {
-    chrome.tabs.create({ url: "https://www.google.com" });
+
+  if (msg.action === "openNewTab" && msg.url) {
+    chrome.tabs.create({ url: msg.url });
   }
 
-  if (msg.action === "close tab") {
-    // Always close the currently active tab in the current window
+  if (msg.action === "switch_tab") {
+    const query = msg.query;
+    chrome.tabs.query({ currentWindow: true }, function (tabs) {
+      for (let i = 0; i < tabs.length; i++) {
+        // Check if the tab title contains the query
+        console.log(tabs[i].title.toLowerCase());
+        console.log(query);
+        if (tabs[i].title.toLowerCase().includes(query.toLowerCase())) {
+          // Switch to the found tab
+          chrome.tabs.update(tabs[i].id, { active: true });
+          break; // Stop after the first match
+        }
+      }
+    });
+  }
+
+  if (msg.action === "close_tab") {
+    // Find the currently active tab in the current window
     chrome.tabs.query({ active: true, currentWindow: true }, (tabs) => {
       if (tabs.length > 0) {
+        // Remove the tab by its ID
         chrome.tabs.remove(tabs[0].id);
       }
     });
-
   }
 
-  // if (msg.action === "close tab" && sender.tab?.id) {
-  //   console.log("background js");
-  //   console.log(sender.tab.id);
-  //   chrome.tabs.remove(sender.tab.id);
-  // }
-
-  if (msg.action === "switch_tab" && typeof msg.index === "number") {
+  // Send all open tabs back to content script
+  if (msg.action === "get_all_tabs") {
     chrome.tabs.query({ currentWindow: true }, (tabs) => {
-      const idx = msg.index - 1;
-      if (idx >= 0 && idx < tabs.length) {
-        lastTabId = sender.tab.id;
-        chrome.tabs.update(tabs[idx].id, { active: true });
-      }
+      sendResponse(tabs);
     });
+    return true; // keep message channel open
   }
 
   if (msg.action === "next_tab" || msg.action === "prev_tab") {
@@ -47,6 +65,13 @@ chrome.runtime.onMessage.addListener((msg, sender, sendResponse) => {
     });
   }
 
+  if (msg.action === "go_back_tab" && lastActiveTabId !== null) {
+    chrome.tabs.get(lastActiveTabId, (tab) => {
+      if (chrome.runtime.lastError || !tab) return; // tab might be closed
+      chrome.tabs.update(tab.id, { active: true });
+    });
+  }
+
   if (msg.action === "go_back_tab" && lastTabId) {
     chrome.tabs.get(lastTabId, (tab) => {
       if (chrome.runtime.lastError) return; // tab closed
@@ -54,3 +79,157 @@ chrome.runtime.onMessage.addListener((msg, sender, sendResponse) => {
     });
   }
 });
+
+function splitTextIntoChunks(text, lang, maxLength = 200) {
+  // let sentences;
+  const sentences = text.match(/[^।!?\.]+[।!?\.]+|[^।!?\.]+$/g) || [text];
+  // if (lang = "en"){
+  //  sentences = text.match(/[^\.!\?]+[\.!\?]+|[^\.!\?]+$/g) || [text];
+  // }
+  // if(lang="bn"){
+  //  sentences = text.match(/[^\|!\?]+[\|!\?]+|[^\|!\?]+$/g) || [text];
+  // }
+  let chunks = [];
+  let chunk = "";
+
+  for (const sentence of sentences) {
+    if ((chunk + sentence).length <= maxLength) {
+      chunk += sentence;
+    } else {
+      if (chunk) chunks.push(chunk.trim());
+      chunk = sentence;
+    }
+  }
+  if (chunk) chunks.push(chunk.trim());
+  return chunks;
+}
+
+chrome.runtime.onInstalled.addListener(() => {
+  chrome.contextMenus.create({
+    id: "readAloud",
+    title: "🔊 Read Aloud (Bangla & English)",
+    contexts: ["selection"],
+  });
+});
+
+chrome.contextMenus.onClicked.addListener(async (info, tab) => {
+  if (info.menuItemId === "readAloud") {
+    const text = info.selectionText.trim();
+    const lang = /[\u0980-\u09FF]/.test(text) ? "bn" : "en";
+    const chunks = splitTextIntoChunks(text, lang);
+
+    let base64Audios = [];
+
+    for (const chunk of chunks) {
+      const url = `https://translate.google.com/translate_tts?ie=UTF-8&q=${encodeURIComponent(
+        chunk
+      )}&tl=${lang}&client=tw-ob`;
+      try {
+        const response = await fetch(url, {
+          headers: {
+            Referer: "https://translate.google.com/",
+            "User-Agent":
+              "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 Chrome/116.0.0.0 Safari/537.36",
+          },
+        });
+
+        const arrayBuffer = await response.arrayBuffer();
+        const base64Audio = btoa(
+          new Uint8Array(arrayBuffer).reduce(
+            (s, b) => s + String.fromCharCode(b),
+            ""
+          )
+        );
+        base64Audios.push(base64Audio);
+      } catch (error) {
+        console.error("TTS fetch failed for chunk:", chunk, error);
+      }
+    }
+
+    // Send all chunks for sequential playback
+    chrome.scripting.executeScript({
+      target: { tabId: tab.id },
+      func: playAudioChunks,
+      args: [base64Audios],
+    });
+  }
+});
+
+// Injected into page to play audio chunks one by one
+function playAudioChunks(base64Audios) {
+  const playNext = (index) => {
+    if (index >= base64Audios.length) return;
+
+    const audio =
+      document.getElementById("context-tts-audio") ||
+      (() => {
+        const a = document.createElement("audio");
+        a.id = "context-tts-audio";
+        document.body.appendChild(a);
+        return a;
+      })();
+
+    const blob = new Blob(
+      [Uint8Array.from(atob(base64Audios[index]), (c) => c.charCodeAt(0))],
+      { type: "audio/mpeg" }
+    );
+    audio.src = URL.createObjectURL(blob);
+    audio.onended = () => playNext(index + 1);
+    audio.onerror = () => console.error("Error playing chunk:", index);
+    audio.play().catch((err) => console.error("Playback error:", err));
+  };
+
+  playNext(0);
+}
+
+// chrome.contextMenus.onClicked.addListener(async (info, tab) => {
+//   if (info.menuItemId === "readAloud") {
+//     const text = info.selectionText.trim();
+//     const lang = /[\u0980-\u09FF]/.test(text) ? "bn" : "en";
+//     const url = `https://translate.google.com/translate_tts?ie=UTF-8&q=${encodeURIComponent(text)}&tl=${lang}&client=tw-ob`;
+
+//     try {
+//       const response = await fetch(url, {
+//         headers: {
+//           "Referer": "https://translate.google.com/",
+//           "User-Agent":
+//             "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 Chrome/116.0.0.0 Safari/537.36"
+//         }
+//       });
+
+//       const arrayBuffer = await response.arrayBuffer();
+//       const base64Audio = btoa(
+//         new Uint8Array(arrayBuffer)
+//           .reduce((s, b) => s + String.fromCharCode(b), '')
+//       );
+
+//       // send to content script
+//       chrome.scripting.executeScript({
+//         target: { tabId: tab.id },
+//         func: playBase64Audio,
+//         args: [base64Audio]
+//       });
+
+//     } catch (error) {
+//       console.error("TTS fetch failed:", error);
+//     }
+//   }
+// });
+
+// // function injected into page
+// function playBase64Audio(base64Audio) {
+//   const blob = new Blob([Uint8Array.from(atob(base64Audio), c => c.charCodeAt(0))], { type: "audio/mpeg" });
+//   const url = URL.createObjectURL(blob);
+
+//   let audio = document.getElementById("context-tts-audio");
+//   if (!audio) {
+//     audio = document.createElement("audio");
+//     audio.id = "context-tts-audio";
+//     document.body.appendChild(audio);
+//   }
+//   audio.src = url;
+//   audio.play().catch(err => {
+//     console.error("Playback failed:", err);
+//     alert("Could not play audio: " + err.message);
+//   });
+// }

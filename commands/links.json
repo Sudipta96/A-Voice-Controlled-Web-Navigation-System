@@ -1,0 +1,11 @@
+{
+  "open_password_change_facebook": "https://accountscenter.facebook.com/password_and_security/password/change/",
+  "facebook_login_activity": "https://accountscenter.facebook.com/password_and_security/login_activity",
+  "open_password_change_gmail": "https://myaccount.google.com/security",
+
+  "open_settings_facebook": "https://www.facebook.com/settings",
+  "open_settings_gmail": "https://myaccount.google.com"
+}
+
+
+

@@ -3,7 +3,7 @@
   "name": "Voice Toggle Extension",
   "version": "1.0",
   "description": "Start/stop voice recognition from the toolbar icon.",
-  "permissions": ["scripting", "tabs", "activeTab"],
+  "permissions": ["scripting", "tabs", "activeTab", "contextMenus"],
   "host_permissions": ["<all_urls>"],
   "background": {
     "service_worker": "background.js"
@@ -18,12 +18,28 @@
   "content_scripts": [
     {
       "matches": ["<all_urls>"],
-      "js": ["utilities.js","content.js"]
+      "js": [
+        "content/utils.js",
+        "content/mic-ui.js",
+        "content/media.js",
+        "content/tab.js",
+        "content/form.js",
+        "content/links.js",
+        "content/search.js",
+        "content/speak.js",
+        "content/commands-handler.js",
+        "content/core.js",
+        "content/content.js"
+      ]
     }
   ],
   "web_accessible_resources": [
     {
-      "resources": ["commands/en.json", "commands/bn.json"],
+      "resources": [
+        "commands/en.json",
+        "commands/bn.json",
+        "commands/links.json"
+      ],
       "matches": ["<all_urls>"]
     }
   ]

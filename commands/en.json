@@ -7,39 +7,18 @@
   "scroll_last": ["scroll last", "scroll bottom", "go to bottom"],
   "scroll_top": ["scroll top", "go to top", "top of page"],
 
-  "new_tab": ["new tab", "open new tab", "create tab"],
-  "close_tab": ["close tab", "remove tab"],
+  "start_tabs": ["start tabs", "enable tab mode"],
+  "stop_tabs": ["stop tabs", "disable tab mode"],
+  "tab_next": ["next tab", "next steps"],
+  "tab_previous": ["previous tab", "last tab"],
+  "tab_switch": ["change to *"],
+  "tab_close": ["close tab"],
+  "tab_display": ["display", "show tab"],
 
-  "next_tab": ["next tab", "switch next tab", "go next tab"],
-  "prev_tab": ["previous tab", "go back tab", "prev tab", "last tab"],
-  "go_back_tab": ["go back", "back to last tab"],
-
-  "switch_tab": [
-    "tab one",
-    "tab 1",
-    "tab two",
-    "tab 2",
-    "tab three",
-    "tab 3",
-    "tab four",
-    "tab 4",
-    "tab five",
-    "tab 5",
-    "tab six",
-    "tab 6",
-    "tab seven",
-    "tab 7",
-    "tab eight",
-    "tab 8",
-    "tab nine",
-    "tab 9",
-    "tab ten",
-    "tab 10"
-  ],
-
-  "open_site": ["open youtube", "open gmail", "open facebook"],
+  "open_site": ["open youtube", "open gmail", "open facebook", "open new tab"],
 
   "search": ["search *", "google *"],
+
   "start_media": ["start media"],
   "stop_media": ["media stop"],
   "media_play": ["play", "resume"],
@@ -51,28 +30,62 @@
   "media_unmute": ["unmute"],
   "media_forward": ["forward * seconds", "go forward * seconds"],
   "media_backward": ["back * seconds", "go back * seconds"],
-  "show_links": ["show links", "highlight links"],
+
+  "show_links": ["show links", "highlight links", "sholings", "links", "link"],
   "click_link": ["click *", "link *"],
   "hide_links": ["hide links", "remove links"],
+
   "zoom_in": ["zoom in", "increase zoom", "make bigger"],
   "zoom_out": ["zoom out", "decrease zoom", "make smaller"],
   "reset_zoom": ["reset zoom", "normal zoom"],
-  "start_form": ["start form", "begin form", "form mode"],
-  "stop_form": ["stop form", "end form", "exit form"],
+
+  "form_start": [
+    "start form",
+    "begin form",
+    "form mode",
+    "begin from",
+    "from mode"
+  ],
+  "form_stop": ["stop form", "end form", "exit form"],
   "form_next": ["next"],
-  "form_back": ["reverse", "rivers", "revers", "to"],
+  "form_back": ["reverse", "rivers", "revers", "to", "previous"],
   "form_clear_field": ["clear"],
   "form_go_to_field": ["go to *", "focus *", "select *"],
   "form_start_index": ["index"],
   "form_stop_index": ["stop form", "hide input", "exit form"],
   "form_focus_index": ["go *", "field *"],
-  "form_select_radio": ["select *", "choose *"],
+
+  "form_select": ["select *", "choose *", "pick *", "option *"],
+  "form_show_options": [
+    "show options",
+    "list options",
+    "read options",
+    "what are the options",
+    "available options"
+  ],
+
   "form_submit": ["submit form", "submit", "send form", "form done"],
   "form_remove_focus": ["off", "of"],
 
-  "read_loud": ["read loud", "start reading"],
-  "read_paragraph": ["read *", "read number *", "read paragraph *"],
+  "reading_mode": ["start reading", "highlight reading blocks"],
+  "read_section": ["read *"],
+  "stop_reading": ["stop reading", "cancel reading"],
+  "close_window": ["close window", "window stop", "cancel window"],
   "toggle_lang": ["toggle", "change language"],
-  "read_stop": ["stop reading", "stop speaking", "silence"]
+  "read_faster": ["read faster", "increase reading speed", "faster"],
+  "read_slower": ["read slower", "decrease reading speed", "slower"],
+  "read_speed_reset": ["reset reading speed", "default speed"],
 
+  "open_password_change_facebook": [
+    "facebook password change",
+    "change facebook password"
+  ],
+  "facebook_login_activity": ["facebook login activity"],
+  "open_password_change_gmail": [
+    "gmail password change",
+    "change gmail password"
+  ],
+
+  "open_settings_facebook": ["facebook settings", "open facebook settings"],
+  "open_settings_gmail": ["gmail settings", "open gmail settings"]
 }
