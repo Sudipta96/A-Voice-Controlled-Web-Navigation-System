@@ -9,23 +9,25 @@ chrome.tabs.onActivated.addListener((activeInfo) => {
   currentActiveTabId = activeInfo.tabId;
 });
 
-// background.js
-// chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
-//   if (message.action === "logTestResult") {
-//     chrome.storage.local.get({ testResults: [] }, (data) => {
-//       const results = data.testResults;
-//       results.push(message.result);
-//       chrome.storage.local.set({ testResults: results }, () => {
-//         console.log("✅ Test logged:", message.result);
-//       });
-//     });
-//   }
-// });
 
 
 chrome.runtime.onMessage.addListener((msg, sender, sendResponse) => {
   console.log("background js");
   console.log(sender.tab.id);
+
+  if (msg.action === "start_export_test_results") {
+    chrome.storage.local.get({ testResults: [] }, (data) => {
+      // Convert object to a string.
+      var result = JSON.stringify(data);
+
+      // Save as file
+      var url = "data:application/json;base64," + btoa(result);
+      chrome.downloads.download({
+        url: url,
+        filename: "filename_of_exported_file.json",
+      });
+    });
+  }
 
   if (msg.action === "logTestResult") {
     chrome.storage.local.get({ testResults: [] }, (data) => {
@@ -35,6 +37,19 @@ chrome.runtime.onMessage.addListener((msg, sender, sendResponse) => {
         console.log("✅ Test logged:", message.result);
       });
     });
+  }
+
+  if (msg.action === "downloadTestResults") {
+    const blob = new Blob([msg.data], { type: "text/plain" });
+    const url = URL.createObjectURL(blob);
+
+    chrome.downloads.download({
+      url: url,
+      filename: "test_results.txt",
+      saveAs: true,
+    });
+
+    sendResponse({ success: true });
   }
 
   if (msg.action === "openNewTab" && msg.url) {
@@ -206,54 +221,3 @@ function playAudioChunks(base64Audios) {
   playNext(0);
 }
 
-// chrome.contextMenus.onClicked.addListener(async (info, tab) => {
-//   if (info.menuItemId === "readAloud") {
-//     const text = info.selectionText.trim();
-//     const lang = /[\u0980-\u09FF]/.test(text) ? "bn" : "en";
-//     const url = `https://translate.google.com/translate_tts?ie=UTF-8&q=${encodeURIComponent(text)}&tl=${lang}&client=tw-ob`;
-
-//     try {
-//       const response = await fetch(url, {
-//         headers: {
-//           "Referer": "https://translate.google.com/",
-//           "User-Agent":
-//             "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 Chrome/116.0.0.0 Safari/537.36"
-//         }
-//       });
-
-//       const arrayBuffer = await response.arrayBuffer();
-//       const base64Audio = btoa(
-//         new Uint8Array(arrayBuffer)
-//           .reduce((s, b) => s + String.fromCharCode(b), '')
-//       );
-
-//       // send to content script
-//       chrome.scripting.executeScript({
-//         target: { tabId: tab.id },
-//         func: playBase64Audio,
-//         args: [base64Audio]
-//       });
-
-//     } catch (error) {
-//       console.error("TTS fetch failed:", error);
-//     }
-//   }
-// });
-
-// // function injected into page
-// function playBase64Audio(base64Audio) {
-//   const blob = new Blob([Uint8Array.from(atob(base64Audio), c => c.charCodeAt(0))], { type: "audio/mpeg" });
-//   const url = URL.createObjectURL(blob);
-
-//   let audio = document.getElementById("context-tts-audio");
-//   if (!audio) {
-//     audio = document.createElement("audio");
-//     audio.id = "context-tts-audio";
-//     document.body.appendChild(audio);
-//   }
-//   audio.src = url;
-//   audio.play().catch(err => {
-//     console.error("Playback failed:", err);
-//     alert("Could not play audio: " + err.message);
-//   });
-// }

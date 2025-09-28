@@ -108,16 +108,11 @@ function handleRecognitionResult(event) {
 
     console.log(formMode);
 
-    // if(formMode && !matchCommand(transcript))
-    // {
-    //   handleFormInput(transcript);
-    // }
-
-    startTime = performance.now(); // ✅ start timestamp
+    // startTime = performance.now(); // ✅ start timestamp
     const match = matchCommand(transcript);
     // Recognition accuracy test
 
-    // console.log(match);
+    console.log(match);
 
     if (!match && formMode) {
       handleFormCommand("", "", transcript);
@@ -201,11 +196,15 @@ function handleRecognitionResult(event) {
     if (intent === "tab_display") {
       return handleTabCommand(transcript, intent);
     }
-    if (intent === "tab_next") {
-      return handleTabCommand(transcript, "tab_next");
+    if (intent === "tab_next" && now - lastCommandTime > 2000) {
+      handleTabCommand(transcript, "tab_next");
+      lastCommandTime = now;
+      return;
     }
-    if (intent === "tab_previous") {
-      return handleTabCommand(transcript, "tab_previous");
+    if (intent === "tab_previous" && now - lastCommandTime > 2000) {
+      handleTabCommand(transcript, "tab_previous");
+      lastCommandTime = now;
+      return;
     }
     if (intent === "tab_switch" && value.length > 0) {
       return handleTabCommand(transcript, "tab_switch", value);
@@ -216,29 +215,7 @@ function handleRecognitionResult(event) {
       return;
     }
 
-    // if (intent === "tab_display") {
-    //   return handleTabCommand(intent);
-    // }
-    // if (intent === "tab_next") {
-    //   return chrome.runtime.sendMessage({ action: "next_tab" });
-    // }
-    // if (intent === "tab_previous")
-    //   return chrome.runtime.sendMessage({ action: "prev_tab" });
-
-    // if (intent === "tab_switch") {
-    //   if (value.length > 0) {
-    //     return chrome.runtime.sendMessage({
-    //       action: "switch_tab",
-    //       query: value,
-    //     });
-    //   }
-    // }
-
-    // if (intent === "tab_close" && now - lastCommandTime > 2000) {
-    //   chrome.runtime.sendMessage({ action: "close_tab" });
-    //   lastCommandTime = now;
-    //   return;
-    // }
+    
 
     // ---------- Media ----------
     if (intent === "start_media") {
@@ -337,10 +314,6 @@ function handleRecognitionResult(event) {
       return;
     }
 
-    // FORM INPUT (if form mode is on)
-    // if (formMode) {
-    //   handleFormInput(transcript);
-    // }
   }
 }
 

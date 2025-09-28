@@ -27,6 +27,7 @@ function injectMicButton() {
 
   micBtn.addEventListener("click", () => {
     if (micBtn.style.background === "rgb(40, 167, 69)") {
+      
       stopRecognition();
     } else {
       startRecognition();
@@ -100,39 +101,3 @@ function setLanguage(langCode) {
   console.log("🔁 Language set to:", window.selectedLanguageCode);
 }
 
-// function injectLanguageSelector() {
-//   if (document.getElementById("lang-select")) return;
-
-//   const select = document.createElement("select");
-//   select.id = "lang-select";
-//   select.style = `
-//     position: fixed;
-//     bottom: 80px;
-//     right: 20px;
-//     z-index: 99999;
-//     padding: 5px;
-//     font-size: 14px;
-//   `;
-
-//   const languages = [
-//     { code: "en-US", label: "English" },
-//     { code: "bn-BD", label: "Bangla" },
-//   ];
-
-//   languages.forEach(({ code, label }) => {
-//     const option = document.createElement("option");
-//     option.value = code;
-//     option.textContent = label;
-//     select.appendChild(option);
-//   });
-
-//   select.value = selectedLanguageCode;
-
-//   select.addEventListener("change", (e) => {
-//     setLanguage(e.target.value);
-//     // location.reload(); // Reload to apply new lang (or re-init)
-
-//   });
-
-//   document.body.appendChild(select);
-// }

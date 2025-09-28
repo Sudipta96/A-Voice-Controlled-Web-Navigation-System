@@ -3,7 +3,14 @@
   "name": "Voice Controlled Web Navigation",
   "version": "1.0",
   "description": "Start/stop voice recognition from the toolbar icon.",
-  "permissions": ["storage", "scripting", "tabs", "activeTab", "contextMenus"],
+  "permissions": [
+    "downloads",
+    "storage",
+    "scripting",
+    "tabs",
+    "activeTab",
+    "contextMenus"
+  ],
   "host_permissions": ["<all_urls>"],
   "background": {
     "service_worker": "background.js"

@@ -54,6 +54,13 @@ function handleTabCommand(transcript, intent, value = "", callback) {
       showBubble("🆕 Opening new tab: " + url);
       break;
 
+    case "tab_next":
+      chrome.runtime.sendMessage({ action: "next_tab" }, () => {
+        logTestResult(intent, "Pass", startTime);
+        if (callback) callback();
+      });
+      break;
+
     case "tab_previous":
       chrome.runtime.sendMessage({ action: "prev_tab" }, () => {
         logTestResult(intent, "Pass", startTime);

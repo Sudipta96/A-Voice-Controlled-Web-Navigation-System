@@ -86,16 +86,16 @@ function handleMediaCommand(intent, value = "") {
 }
 
 // Send result to background
-function logTestResult(feature, status, startTime, endTime) {
-  console.log("log");
-  const responseTime = ((endTime - startTime) / 1000).toFixed(2);
+// function logTestResult(feature, status, startTime, endTime) {
+//   console.log("log");
+//   const responseTime = ((endTime - startTime) / 1000).toFixed(2);
 
-  const result = {
-    feature,
-    status,
-    responseTime,
-    timestamp: new Date().toLocaleString(),
-  };
+//   const result = {
+//     feature,
+//     status,
+//     responseTime,
+//     timestamp: new Date().toLocaleString(),
+//   };
 
-  chrome.runtime.sendMessage({ action: "logTestResult", result });
-}
+//   chrome.runtime.sendMessage({ action: "logTestResult", result });
+// }
