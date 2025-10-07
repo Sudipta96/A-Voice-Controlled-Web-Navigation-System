@@ -78,24 +78,5 @@ function handleMediaCommand(intent, value = "") {
       break;
   }
 
-  // const endTime = performance.now();
-  // const responseTime = Math.round(endTime - startTime); // milliseconds
-  // console.log(
-  //   `[TEST] ${intent} | Status: ${actionStatus} | Response Time: ${responseTime}ms`
-  // );
 }
 
-// Send result to background
-// function logTestResult(feature, status, startTime, endTime) {
-//   console.log("log");
-//   const responseTime = ((endTime - startTime) / 1000).toFixed(2);
-
-//   const result = {
-//     feature,
-//     status,
-//     responseTime,
-//     timestamp: new Date().toLocaleString(),
-//   };
-
-//   chrome.runtime.sendMessage({ action: "logTestResult", result });
-// }

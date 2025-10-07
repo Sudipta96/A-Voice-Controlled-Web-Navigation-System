@@ -81,11 +81,5 @@
     "change facebook password"
   ],
   "facebook_login_activity": ["facebook login activity"],
-  "open_password_change_gmail": [
-    "gmail password change",
-    "change gmail password"
-  ],
-
-  "open_settings_facebook": ["facebook settings", "open facebook settings"],
-  "open_settings_gmail": ["gmail settings", "open gmail settings"]
+  "open_settings_facebook": ["facebook settings", "open facebook settings"]
 }
